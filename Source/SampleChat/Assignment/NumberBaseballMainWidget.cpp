@@ -8,8 +8,6 @@ void UNumberBaseballMainWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	UE_LOG(LogTemp, Warning, TEXT("[UNumberBaseballMainWidget] NativeConstruct"));
-
 	if (NumberTextField)
 	{
 		NumberTextField->OnTextCommitted.AddDynamic(this, &UNumberBaseballMainWidget::OnTextCommittedFunction);

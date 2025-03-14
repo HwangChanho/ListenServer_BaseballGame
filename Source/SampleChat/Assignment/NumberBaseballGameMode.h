@@ -22,7 +22,7 @@ public:
 	ANumberBaseballGameMode();
 
 	// 플레이어 등록 등록시 게임이 시작된다.
-	void StartPlay();
+	void PlayGame();
 	// 랜덤번호 생성
 	void GenerateRandNumber();
 	// 플레이어가 입력한 번호를 검증

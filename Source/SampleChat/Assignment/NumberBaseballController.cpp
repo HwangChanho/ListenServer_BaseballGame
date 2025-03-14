@@ -9,8 +9,6 @@ void ANumberBaseballController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] BeginPlay"));
-
 	// 마우스 모드
 	bShowMouseCursor = true;
 	FInputModeUIOnly InputMode;
@@ -29,8 +27,6 @@ void ANumberBaseballController::BeginPlay()
 
 		BaseballInstance->AddToViewport();
 		BaseballInstance->SetOwningPlayer(this);
-
-		UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] Widget Added"));
 	}
 
 	if (HasAuthority())
@@ -53,7 +49,7 @@ void ANumberBaseballController::Server_RequestBeginPlay_Implementation(APlayerCo
 		return;
 	}
 	
-	GameMode->StartPlay();
+	GameMode->PlayGame();
 }
 
 void ANumberBaseballController::Client_IsOut_Implementation(APlayerController* PlayerController)
@@ -75,7 +71,7 @@ void ANumberBaseballController::Client_IsWinner_Implementation(APlayerController
 
 void ANumberBaseballController::Client_TurnStart_Implementation(APlayerController* PlayerController)
 {
-	UE_LOG(LogTemp, Error, TEXT("[NetMulticast] First Player: %p"), PlayerController);
+	UE_LOG(LogTemp, Error, TEXT("[Client] First Player: %p"), PlayerController);
 	int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
 	const FString FormattedMessage = FString::Printf(TEXT("[Player%d] Turn"), PlayerID);
 	DebugHelper::PrintDebugMessage(FormattedMessage, DisplayTime, ServerColor);
@@ -98,6 +94,15 @@ void ANumberBaseballController::Server_SendNumber_Implementation(const FString& 
 		return;
 	}
 
+	FString NumberPart = NumString.Mid(1);
+
+	if (NumberPart == TEXT("start"))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Server] Start Game!"));
+		Server_RequestBeginPlay(this);
+		return;
+	}
+
 	GameMode->CheckNumberString(this, NumString);
 }
 
@@ -110,8 +115,7 @@ bool ANumberBaseballController::Server_SendNumber_Validate(const FString& NumStr
 
 		if (NumberPart == TEXT("start")) // start 일 경우 게임시작
 		{
-			Server_RequestBeginPlay(this);
-			return false;
+			return true;
 		}
 
 		for (TCHAR Char : NumberPart)

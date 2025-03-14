@@ -9,11 +9,7 @@ ANumberBaseballGameMode::ANumberBaseballGameMode()
 
 void ANumberBaseballGameMode::BeginPlay()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballGameMode] Befor Super BeginPlay"));
-
 	Super::BeginPlay();
-
-	UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballGameMode] BeginPlay"));
 }
 
 void ANumberBaseballGameMode::Tick(float DeltaTime)
@@ -77,8 +73,7 @@ void ANumberBaseballGameMode::AddAllPlayerControllers()
 {
 	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 	{
-		APlayerController* PlayerController = Iterator->Get();
-		if (PlayerController)
+		if (APlayerController* PlayerController = Iterator->Get())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Server] Found PlayerController: %p"), PlayerController);
 			if (!PlayerDetailMap.Contains(PlayerController))
@@ -91,7 +86,7 @@ void ANumberBaseballGameMode::AddAllPlayerControllers()
 	GenerateGame();
 }
 
-void ANumberBaseballGameMode::StartPlay()
+void ANumberBaseballGameMode::PlayGame()
 {
 	if (EGameState::Waiting != CurrentGameState) return;
 
