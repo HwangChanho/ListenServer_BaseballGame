@@ -25,6 +25,8 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = "Server")
 	void Server_SendNumber(const FString& NumString);
 
+	
+
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
 	void Client_SendResult(FNumberBaseballResult Result);
 	
