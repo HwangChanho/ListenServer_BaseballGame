@@ -39,9 +39,20 @@ void ANumberBaseballController::BeginPlay()
 	}
 }
 
+void ANumberBaseballController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	
+}
+
+void ANumberBaseballController::SetCurrentPlayer()
+{
+	const int32 PlayerID = PlayerState ? PlayerState->GetPlayerId() : -1;
+	BaseballInstance->SetCurrentPlayer(FString::Printf(TEXT("%d"), PlayerID));
+}
+
 void ANumberBaseballController::Server_RequestBeginPlay_Implementation(APlayerController* PlayerController)
 {
-	// 플레이어 등록
 	ANumberBaseballGameMode* GameMode = GetWorld()->GetAuthGameMode<ANumberBaseballGameMode>();
 	if (!GameMode)
 	{
@@ -52,10 +63,22 @@ void ANumberBaseballController::Server_RequestBeginPlay_Implementation(APlayerCo
 	GameMode->PlayGame();
 }
 
+void ANumberBaseballController::Server_RequestReady_Implementation(APlayerController* PlayerController)
+{
+	ANumberBaseballGameMode* GameMode = GetWorld()->GetAuthGameMode<ANumberBaseballGameMode>();
+	if (!GameMode)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ANumberBaseballController] BeginPlay Controller GameMode is NULL!"));
+		return;
+	}
+	
+	GameMode->PlayerReady(PlayerController);
+}
+
 void ANumberBaseballController::Client_IsOut_Implementation(APlayerController* PlayerController)
 {
 	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
-	const FString JoinLog = FString::Printf(TEXT("[Player%d] Out"), PlayerID);
+	const FString JoinLog = FString::Printf(TEXT("[Player %d] Out"), PlayerID);
 	DebugHelper::PrintDebugMessage(JoinLog, WarningDisplayTime, ServerColor);
 
 	// TODO::위젯 변경
@@ -65,18 +88,19 @@ void ANumberBaseballController::Client_IsOut_Implementation(APlayerController* P
 void ANumberBaseballController::Client_IsWinner_Implementation(APlayerController* PlayerController)
 {
 	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
-	const FString JoinLog = FString::Printf(TEXT("[Player%d] Won!"), PlayerID);
+	const FString JoinLog = FString::Printf(TEXT("[Player %d] Won!"), PlayerID);
 	DebugHelper::PrintDebugMessage(JoinLog, DisplayTime, ServerColor);
 }
 
-void ANumberBaseballController::Client_TurnStart_Implementation(APlayerController* PlayerController)
+void ANumberBaseballController::Client_TurnStart_Implementation(APlayerController* PlayerController, FNumberBaseballResult Result)
 {
-	UE_LOG(LogTemp, Error, TEXT("[Client] First Player: %p"), PlayerController);
-	int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
-	const FString FormattedMessage = FString::Printf(TEXT("[Player%d] Turn"), PlayerID);
+	UE_LOG(LogTemp, Warning, TEXT("[Client] First Player: %p"), PlayerController);
+	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
+	const FString FormattedMessage = FString::Printf(TEXT("[Player %d] Turn"), PlayerID);
 	DebugHelper::PrintDebugMessage(FormattedMessage, DisplayTime, ServerColor);
 
 	BaseballInstance->SetTurn(FString::Printf(TEXT("%d"), PlayerID));
+	BaseballInstance->SetDisplay(Result);
 }
 
 void ANumberBaseballController::Client_SendResult_Implementation(FNumberBaseballResult Result)
@@ -85,8 +109,37 @@ void ANumberBaseballController::Client_SendResult_Implementation(FNumberBaseball
 	BaseballInstance->SetDisplay(Result);
 }
 
-void ANumberBaseballController::Server_SendNumber_Implementation(const FString& NumString)
+void ANumberBaseballController::SendMessageToServer(const FString& Message)
 {
+	if (Message[0] == TEXT('/'))
+	{
+		FString Text = Message.Mid(1);
+
+		if (Text == TEXT("ready"))
+		{
+			Server_RequestReady(this);
+			SetCurrentPlayer();
+			return;
+		}
+
+		if (Text == TEXT("start") && HasAuthority()) // Host 만 시작 가능
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Server] Start Game!"));
+			Server_RequestBeginPlay(this);
+			return;
+		}
+	}
+	
+	FString FormattedMessage = FString::Printf(TEXT("[Player%d]: [%s]"), this->PlayerState->GetPlayerId(), *Message);
+	BaseballInstance->AddMessage(FText::FromString(FormattedMessage));
+	
+	Server_SendNumber(this, Message);
+}
+
+void ANumberBaseballController::Server_SendNumber_Implementation(APlayerController* PlayerController, const FString& NumString)
+{
+	FString NumberPart = NumString.Mid(1);
+		
 	ANumberBaseballGameMode* GameMode = GetWorld()->GetAuthGameMode<ANumberBaseballGameMode>();
 	if (!GameMode)
 	{
@@ -94,29 +147,24 @@ void ANumberBaseballController::Server_SendNumber_Implementation(const FString& 
 		return;
 	}
 
-	FString NumberPart = NumString.Mid(1);
-
-	if (NumberPart == TEXT("start"))
+	if (GameMode->CheckTurn(PlayerController))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Server] Start Game!"));
-		Server_RequestBeginPlay(this);
-		return;
+		GameMode->CheckNumberString(this, NumString);
 	}
-
-	GameMode->CheckNumberString(this, NumString);
+	else
+	{
+		int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
+		const FString FormattedMessage = FString::Printf(TEXT("[Player %d] It's not your turn"), PlayerID);
+		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
+	}
 }
 
-bool ANumberBaseballController::Server_SendNumber_Validate(const FString& NumString)
+bool ANumberBaseballController::Server_SendNumber_Validate(APlayerController* PlayerController, const FString& NumString)
 {
 	if (NumString[0] == TEXT('/'))
 	{
 		FString NumberPart = NumString.Mid(1); // 시작위치 변경
 		TSet<TCHAR> UniqueChars;
-
-		if (NumberPart == TEXT("start")) // start 일 경우 게임시작
-		{
-			return true;
-		}
 
 		for (TCHAR Char : NumberPart)
 		{
@@ -140,11 +188,6 @@ bool ANumberBaseballController::Server_SendNumber_Validate(const FString& NumStr
 		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
 		return false;
 	}
-	else
-	{
-		// TODO::추가 개발 가능 채팅으로 분기
-		FString FormattedMessage = FString::Printf(TEXT("[Player%d]: [%s]"), this->PlayerState->GetPlayerId(), *NumString);
-		DebugHelper::PrintDebugMessage(FormattedMessage, ChatDisplayTime, ChatColor);
-		return false;
-	}
+	
+	return false;
 }

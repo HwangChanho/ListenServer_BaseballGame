@@ -63,34 +63,46 @@ void ANumberBaseballGameMode::AdvanceTurn()
 	UE_LOG(LogTemp, Warning, TEXT("[Server] CurrentTurnPlayer: %p"), CurrentTurnPlayer);
 
 	// 다음 플레이어에게 턴 시작 알림
-	if (ANumberBaseballController* NextController = Cast<ANumberBaseballController>(CurrentTurnPlayer))
+	if (ANumberBaseballController* StartController = Cast<ANumberBaseballController>(CurrentTurnPlayer))
 	{
-		NextController->Client_TurnStart(NextController);
+		for (const auto& c : PlayerOrder)
+		{
+			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(c))
+			{
+				CastingController->Client_TurnStart(StartController, PlayerDetailMap[StartController]);
+			}
+		}
 	}
 }
 
-void ANumberBaseballGameMode::AddAllPlayerControllers()
+void ANumberBaseballGameMode::AddAllPlayerControllers(APlayerController* PlayerController)
 {
 	for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 	{
-		if (APlayerController* PlayerController = Iterator->Get())
+		if (APlayerController* WorldPlayerController = Iterator->Get())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[Server] Found PlayerController: %p"), PlayerController);
-			if (!PlayerDetailMap.Contains(PlayerController))
+			UE_LOG(LogTemp, Warning, TEXT("[Server] Found PlayerController: %p"), WorldPlayerController);
+			if (!PlayerDetailMap.Contains(PlayerController) && PlayerController == WorldPlayerController)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("[Server] Adding PlayerController: %p"), PlayerController);
 				PlayerDetailMap.Add(PlayerController, FNumberBaseballResult());
 			}
 		}
 	}
-
-	GenerateGame();
 }
 
 void ANumberBaseballGameMode::PlayGame()
 {
 	if (EGameState::Waiting != CurrentGameState) return;
 
-	AddAllPlayerControllers();
+	GenerateGame();
+}
+
+void ANumberBaseballGameMode::PlayerReady(APlayerController* PlayerController)
+{
+	if (EGameState::Playing == CurrentGameState) return;
+
+	AddAllPlayerControllers(PlayerController);
 }
 
 void ANumberBaseballGameMode::GenerateRandNumber()

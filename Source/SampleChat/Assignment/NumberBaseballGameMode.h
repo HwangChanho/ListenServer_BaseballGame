@@ -23,6 +23,10 @@ public:
 
 	// 플레이어 등록 등록시 게임이 시작된다.
 	void PlayGame();
+	// 플레이어 준비 등록
+	void PlayerReady(APlayerController* PlayerController);
+	// 자신의 턴인지 확인한다.
+	FORCEINLINE_DEBUGGABLE bool CheckTurn(const APlayerController* PlayerController) const { return CurrentTurnPlayer == PlayerController; }
 	// 랜덤번호 생성
 	void GenerateRandNumber();
 	// 플레이어가 입력한 번호를 검증
@@ -43,7 +47,7 @@ private:
 	UPROPERTY()
 	TMap<APlayerController*, FNumberBaseballResult> PlayerDetailMap; // 순서 보장 안됨
 	UPROPERTY()
-	TArray<APlayerController*> PlayerOrder;
+	TArray<APlayerController*> PlayerOrder; // 순서
 
 	EGameState CurrentGameState = EGameState::GameOver;
 
@@ -52,5 +56,5 @@ private:
 	// 턴을 넘겨준다
 	void AdvanceTurn();
 	// 플레이어 컨트롷러 가져오기
-	void AddAllPlayerControllers();
+	void AddAllPlayerControllers(APlayerController* PlayerController);
 };

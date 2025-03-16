@@ -2,15 +2,33 @@
 #include "FNumberBaseballResult.h"
 #include "NumberBaseballController.h"
 #include "Components/EditableText.h"
+#include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 
 void UNumberBaseballMainWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (NumberTextField)
+	if (IsValid(NumberTextField))
 	{
 		NumberTextField->OnTextCommitted.AddDynamic(this, &UNumberBaseballMainWidget::OnTextCommittedFunction);
+	}
+}
+
+void UNumberBaseballMainWidget::AddMessage(const FText& Message)
+{
+	if (!IsValid(ChatScrollBox)) return;
+
+	UTextBlock* NewMessage = NewObject<UTextBlock>(this);
+	UE_LOG(LogTemp, Error, TEXT("%s"), *Message.ToString());
+	if (NewMessage)
+	{
+		NewMessage->SetText(Message);
+		NewMessage->Font.Size = 24;
+		NewMessage->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+
+		ChatScrollBox->AddChild(NewMessage);
+		ChatScrollBox->ScrollToEnd();
 	}
 }
 
@@ -25,14 +43,14 @@ void UNumberBaseballMainWidget::OnTextCommittedFunction(const FText& Text, const
 			return;
 		}
 		
-		Controller->Server_SendNumber(Text.ToString());
+		Controller->SendMessageToServer(Text.ToString());
 		NumberTextField->SetText(FText::FromString(""));
 	}
 }
 
 void UNumberBaseballMainWidget::SetDisplay(FNumberBaseballResult& Result)
 {
-	if (!BallTextBlock || !StrikeTextBlock || !TurnTextBlock) return;
+	if (IsValid(BallTextBlock) && IsValid(StrikeTextBlock) && IsValid(TurnTextBlock)) return;
 
 	BallTextBlock->SetText(FText::FromString(FString::Printf(TEXT("B: %d"), Result.BallCount)));
 	StrikeTextBlock->SetText(FText::FromString(FString::Printf(TEXT("S: %d"), Result.StrikeCount)));
@@ -43,7 +61,12 @@ void UNumberBaseballMainWidget::SetTurn(const FString& Player)
 {
 	if (!PlayerTextBlock) return;
 
-	PlayerTextBlock->SetText(FText::FromString(Player + " Turn"));
+	PlayerTextBlock->SetText(FText::FromString(Player + FString(TEXT(" Turn"))));
 }
 
+void UNumberBaseballMainWidget::SetCurrentPlayer(const FString& Player)
+{
+	if (!CurrentPlayerTextBlock) return;
 
+	CurrentPlayerTextBlock->SetText(FText::FromString(FString(TEXT("Player: ")) + Player));
+}

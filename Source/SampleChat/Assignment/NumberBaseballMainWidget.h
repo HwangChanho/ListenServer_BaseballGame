@@ -5,6 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "NumberBaseballMainWidget.generated.h"
 
+class UScrollBox;
 class UTextBlock;
 class UEditableText;
 
@@ -30,6 +31,12 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* PlayerTextBlock;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* CurrentPlayerTextBlock;
+
+	UPROPERTY(meta = (BindWidget))
+	UScrollBox* ChatScrollBox;
 	
 	UFUNCTION()
 	void OnTextCommittedFunction(const FText& Text, const ETextCommit::Type CommitMethod);
@@ -39,6 +46,12 @@ public:
 
 	UFUNCTION()
 	void SetTurn(const FString& Player);
+
+	UFUNCTION()
+	void SetCurrentPlayer(const FString& Player);
+
+	UFUNCTION(BlueprintCallable)
+	void AddMessage(const FText& Message);
 
 protected:
 	virtual void NativeConstruct() override;
