@@ -1,6 +1,7 @@
 #include "NumberBaseballGameMode.h"
 #include "DebugHelper.h"
 #include "NumberBaseballController.h"
+#include "NumberBaseballGameState.h"
 
 ANumberBaseballGameMode::ANumberBaseballGameMode()
 {
@@ -46,7 +47,15 @@ void ANumberBaseballGameMode::GenerateGame()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Server] Player Not Enough"));
+		BroadcastMessageUsingGameState("[Server] Player Not Enough");
+	}
+}
+
+void ANumberBaseballGameMode::BroadcastMessageUsingGameState(const FString& Message)
+{
+	if (ANumberBaseballGameState* MyGameState = GetGameState<ANumberBaseballGameState>())
+	{
+		MyGameState->MulticastBroadcastMessage(Message);
 	}
 }
 
@@ -59,17 +68,19 @@ void ANumberBaseballGameMode::AdvanceTurn()
 
 	const int32 NextIndex = (CurrentIndex + 1) % PlayerOrder.Num();
 	CurrentTurnPlayer = PlayerOrder[NextIndex];
-
-	UE_LOG(LogTemp, Warning, TEXT("[Server] CurrentTurnPlayer: %p"), CurrentTurnPlayer);
-
+	
 	// 다음 플레이어에게 턴 시작 알림
 	if (ANumberBaseballController* StartController = Cast<ANumberBaseballController>(CurrentTurnPlayer))
 	{
+		const int32 BeginPlayerID = StartController->GetUniqueID();
+		const FString Message = FString::Printf(TEXT("[Server] [%d] Turn"), BeginPlayerID);
+		BroadcastMessageUsingGameState(Message);
+		
 		for (const auto& c : PlayerOrder)
 		{
 			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(c))
 			{
-				CastingController->Client_TurnStart(StartController, PlayerDetailMap[StartController]);
+				CastingController->Client_TurnStart(BeginPlayerID, PlayerDetailMap[StartController]);
 			}
 		}
 	}
@@ -81,7 +92,6 @@ void ANumberBaseballGameMode::AddAllPlayerControllers(APlayerController* PlayerC
 	{
 		if (APlayerController* WorldPlayerController = Iterator->Get())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[Server] Found PlayerController: %p"), WorldPlayerController);
 			if (!PlayerDetailMap.Contains(PlayerController) && PlayerController == WorldPlayerController)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[Server] Adding PlayerController: %p"), PlayerController);
@@ -107,6 +117,7 @@ void ANumberBaseballGameMode::PlayerReady(APlayerController* PlayerController)
 
 void ANumberBaseballGameMode::GenerateRandNumber()
 {
+	BroadcastMessageUsingGameState("[Server] Generating RandNumber");
 	FString RandomNumber;
 	
 	while (RandomNumber.Len() < 3)
@@ -129,13 +140,15 @@ void ANumberBaseballGameMode::ReceiveCheckResult(APlayerController* PlayerContro
 	{
 		if (PlayerDetailMap[PlayerController].TurnLeft < 0 || PlayerDetailMap[PlayerController].BallCount > 2)
 		{
-			NumberBaseballPlayerController->Client_IsOut(NumberBaseballPlayerController);
+			int32 PlayerID = NumberBaseballPlayerController->GetUniqueID();
+			NumberBaseballPlayerController->Client_IsOut(PlayerID);
 			PlayerOrder.Remove(PlayerController);
 
 			if (PlayerOrder.Num() == 1 && PlayerOrder.IsValidIndex(0))
 			{
 				// 승자 전송
-				NumberBaseballPlayerController->Client_IsWinner(PlayerOrder[0]);
+				int32 WonPlayerID = PlayerOrder[0]->GetUniqueID();
+				NumberBaseballPlayerController->Client_IsWinner(WonPlayerID);
 				CurrentGameState = EGameState::GameOver;
 			}
 			return;
@@ -151,11 +164,28 @@ void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerControl
 	if (EGameState::Playing != CurrentGameState || CurrentTurnPlayer != PlayerController) return;
 
 	bool bIsCorrect = (InputNumberString.Len() == 3 && InputNumberString == CorrectNumber);
-	UE_LOG(LogTemp, Warning, TEXT("Input: %s | Correct: %s | Match: %s"),
-		*InputNumberString, *CorrectNumber, bIsCorrect ? TEXT("YES") : TEXT("NO"));
+	FString Log = FString::Format(TEXT("Input: {0} | Correct: {1} | Match: {2}"),
+	{ InputNumberString, CorrectNumber, bIsCorrect ? TEXT("YES") : TEXT("NO") });
+	BroadcastMessageToAllControllers(Log);
 
 	bIsCorrect ? ++PlayerDetailMap[PlayerController].StrikeCount : ++PlayerDetailMap[PlayerController].BallCount;
 	--PlayerDetailMap[PlayerController].TurnLeft;
 
 	ReceiveCheckResult(PlayerController);
+}
+
+void ANumberBaseballGameMode::BroadcastMessageToAllControllers(const FString& Message)
+{
+	Multicast_BroadcastMessage(Message);
+}
+
+void ANumberBaseballGameMode::Multicast_BroadcastMessage_Implementation(const FString& Message)
+{
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(It->Get()))
+		{
+			CastingController->Client_ReceiveMessage(Message);
+		}
+	}
 }

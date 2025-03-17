@@ -31,11 +31,11 @@ void ANumberBaseballController::BeginPlay()
 
 	if (HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] Im Host: %p"), this);
+		UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] Im Host: %d"), this->GetUniqueID());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] I'm Guest: %p"), this);
+		UE_LOG(LogTemp, Warning, TEXT("[ANumberBaseballController] I'm Guest: %d"), this->GetUniqueID());
 	}
 }
 
@@ -45,9 +45,9 @@ void ANumberBaseballController::Tick(float DeltaTime)
 	
 }
 
-void ANumberBaseballController::SetCurrentPlayer()
+void ANumberBaseballController::SetCurrentPlayer() const
 {
-	const int32 PlayerID = PlayerState ? PlayerState->GetPlayerId() : -1;
+	const int32 PlayerID = this->GetUniqueID();
 	BaseballInstance->SetCurrentPlayer(FString::Printf(TEXT("%d"), PlayerID));
 }
 
@@ -75,9 +75,8 @@ void ANumberBaseballController::Server_RequestReady_Implementation(APlayerContro
 	GameMode->PlayerReady(PlayerController);
 }
 
-void ANumberBaseballController::Client_IsOut_Implementation(APlayerController* PlayerController)
+void ANumberBaseballController::Client_IsOut_Implementation(int32 PlayerID)
 {
-	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
 	const FString JoinLog = FString::Printf(TEXT("[Player %d] Out"), PlayerID);
 	DebugHelper::PrintDebugMessage(JoinLog, WarningDisplayTime, ServerColor);
 
@@ -85,20 +84,14 @@ void ANumberBaseballController::Client_IsOut_Implementation(APlayerController* P
 	
 }
 
-void ANumberBaseballController::Client_IsWinner_Implementation(APlayerController* PlayerController)
+void ANumberBaseballController::Client_IsWinner_Implementation(int32 PlayerID)
 {
-	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
 	const FString JoinLog = FString::Printf(TEXT("[Player %d] Won!"), PlayerID);
 	DebugHelper::PrintDebugMessage(JoinLog, DisplayTime, ServerColor);
 }
 
-void ANumberBaseballController::Client_TurnStart_Implementation(APlayerController* PlayerController, FNumberBaseballResult Result)
+void ANumberBaseballController::Client_TurnStart_Implementation(int32 PlayerID, FNumberBaseballResult Result)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[Client] First Player: %p"), PlayerController);
-	const int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
-	const FString FormattedMessage = FString::Printf(TEXT("[Player %d] Turn"), PlayerID);
-	DebugHelper::PrintDebugMessage(FormattedMessage, DisplayTime, ServerColor);
-
 	BaseballInstance->SetTurn(FString::Printf(TEXT("%d"), PlayerID));
 	BaseballInstance->SetDisplay(Result);
 }
@@ -107,6 +100,21 @@ void ANumberBaseballController::Client_SendResult_Implementation(FNumberBaseball
 {
 	if (!BaseballInstance) return;
 	BaseballInstance->SetDisplay(Result);
+}
+
+void ANumberBaseballController::Server_SendMessage_Implementation(const FString& Message)
+{
+	if (ANumberBaseballGameMode* GameMode = Cast<ANumberBaseballGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		FString FormattedMessage = FString::Printf(TEXT("[Player%d]: %s"), this->GetUniqueID(), *Message);
+		GameMode->BroadcastMessageToAllControllers(FormattedMessage);
+	}
+}
+
+void ANumberBaseballController::Client_ReceiveMessage_Implementation(const FString& Message)
+{
+	if (!BaseballInstance) return;
+	BaseballInstance->AddMessage(FText::FromString(Message));
 }
 
 void ANumberBaseballController::SendMessageToServer(const FString& Message)
@@ -122,18 +130,40 @@ void ANumberBaseballController::SendMessageToServer(const FString& Message)
 			return;
 		}
 
-		if (Text == TEXT("start") && HasAuthority()) // Host 만 시작 가능
+		if (Text == TEXT("start")) // Host 만 시작 가능
 		{
+			if (!HasAuthority()) return;
 			UE_LOG(LogTemp, Warning, TEXT("[Server] Start Game!"));
 			Server_RequestBeginPlay(this);
 			return;
 		}
+		
+		TSet<TCHAR> UniqueChars;
+
+		for (TCHAR Char : Text)
+		{
+			if (!FChar::IsDigit(Char))
+			{
+				const FString FormattedMessage = FString::Printf(TEXT("유효하지 않은 문자 포함: [%s]"), *Text);
+				DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
+			}
+			UniqueChars.Add(Char);
+		}
+
+		if (UniqueChars.Num() == 3)
+		{
+			UE_LOG(LogTemp, Log, TEXT("유효한 입력: %s"), *Text);
+			DebugHelper::PrintDebugMessage(Text, DisplayTime, ServerColor);
+			Server_SendNumber(this, Message);
+		}
+
+		const FString FormattedMessage = FString::Printf(TEXT("중복 숫자 포함: [%s]"), *Text);
+		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
 	}
-	
-	FString FormattedMessage = FString::Printf(TEXT("[Player%d]: [%s]"), this->PlayerState->GetPlayerId(), *Message);
-	BaseballInstance->AddMessage(FText::FromString(FormattedMessage));
-	
-	Server_SendNumber(this, Message);
+	else
+	{
+		Server_SendMessage(Message);
+	}
 }
 
 void ANumberBaseballController::Server_SendNumber_Implementation(APlayerController* PlayerController, const FString& NumString)
@@ -153,41 +183,8 @@ void ANumberBaseballController::Server_SendNumber_Implementation(APlayerControll
 	}
 	else
 	{
-		int32 PlayerID = PlayerController->PlayerState ? PlayerController->PlayerState->GetPlayerId() : -1;
+		int32 PlayerID = PlayerController->GetUniqueID();
 		const FString FormattedMessage = FString::Printf(TEXT("[Player %d] It's not your turn"), PlayerID);
 		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
 	}
-}
-
-bool ANumberBaseballController::Server_SendNumber_Validate(APlayerController* PlayerController, const FString& NumString)
-{
-	if (NumString[0] == TEXT('/'))
-	{
-		FString NumberPart = NumString.Mid(1); // 시작위치 변경
-		TSet<TCHAR> UniqueChars;
-
-		for (TCHAR Char : NumberPart)
-		{
-			if (!FChar::IsDigit(Char))
-			{
-				const FString FormattedMessage = FString::Printf(TEXT("유효하지 않은 문자 포함: [%s]"), *NumString);
-				DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
-				return false;
-			}
-			UniqueChars.Add(Char);
-		}
-
-		if (UniqueChars.Num() == 3)
-		{
-			UE_LOG(LogTemp, Log, TEXT("유효한 입력: %s"), *NumberPart);
-			DebugHelper::PrintDebugMessage(NumberPart, DisplayTime, ServerColor);
-			return true;
-		}
-
-		const FString FormattedMessage = FString::Printf(TEXT("중복 숫자 포함: [%s]"), *NumString);
-		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
-		return false;
-	}
-	
-	return false;
 }

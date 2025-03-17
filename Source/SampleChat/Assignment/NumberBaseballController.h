@@ -25,20 +25,28 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestReady(APlayerController* PlayerController);
 	
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable, Category = "Server")
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Server")
 	void Server_SendNumber(APlayerController* PlayerController, const FString& NumString);
 
+	// 서버에 메세지 전송
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Server")
+	void Server_SendMessage(const FString& Message);
+
+	// 서버로부터 메세지 응답
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveMessage(const FString& Message);
+	
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
 	void Client_SendResult(FNumberBaseballResult Result);
 	
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
-	void Client_TurnStart(APlayerController* PlayerController, FNumberBaseballResult Result);
+	void Client_TurnStart(int32 PlayerID, FNumberBaseballResult Result);
+	
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
+	void Client_IsOut(int32 PlayerID);
 
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
-	void Client_IsOut(APlayerController* PlayerController);
-
-	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
-	void Client_IsWinner(APlayerController* PlayerController);
+	void Client_IsWinner(int32 PlayerID);
 
 	UFUNCTION(BlueprintCallable)
 	void SendMessageToServer(const FString& Message);
@@ -55,5 +63,5 @@ private:
 	FColor WarningColor = FColor::Red;
 	FColor ServerColor = FColor::Emerald;
 
-	void SetCurrentPlayer();
+	void SetCurrentPlayer() const;
 };

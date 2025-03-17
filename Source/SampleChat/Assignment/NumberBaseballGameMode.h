@@ -33,6 +33,13 @@ public:
 	void CheckNumberString(APlayerController* PlayerController, const FString& InputNumberString);
 	// 검증 결과 전송
 	void ReceiveCheckResult(APlayerController* PlayerController);
+	// 클라이언트에 로그 전송
+	void BroadcastMessageUsingGameState(const FString& Message);
+
+	// 클라이언트에 메세지 전송
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_BroadcastMessage(const FString& Message);
+	void BroadcastMessageToAllControllers(const FString& Message);
 	
 protected:
 	virtual void BeginPlay() override;
