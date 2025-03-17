@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "FNumberBaseballResult.h"
 #include "GameFramework/GameMode.h"
+#include "GameManager.h"
 #include "NumberBaseballGameMode.generated.h"
 
 UENUM(BlueprintType)
@@ -26,7 +27,7 @@ public:
 	// 플레이어 준비 등록
 	void PlayerReady(APlayerController* PlayerController);
 	// 자신의 턴인지 확인한다.
-	FORCEINLINE_DEBUGGABLE bool CheckTurn(const APlayerController* PlayerController) const { return CurrentTurnPlayer == PlayerController; }
+	FORCEINLINE_DEBUGGABLE bool CheckTurn(const APlayerController* PlayerController) const { return Manager->GetCurrentPlayer() == PlayerController; }
 	// 랜덤번호 생성
 	void GenerateRandNumber();
 	// 플레이어가 입력한 번호를 검증
@@ -46,20 +47,7 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	UPROPERTY()
-	FString CorrectNumber;
-	UPROPERTY()
-	APlayerController* CurrentTurnPlayer;
-	UPROPERTY()
-	APlayerController* WinnerPlayer;
-
-	UPROPERTY()
-	TMap<APlayerController*, FNumberBaseballResult> PlayerDetailMap; // 순서 보장 안됨
-	UPROPERTY()
-	TMap<APlayerController*, int32> WinnerMap; // 승자 목록
-	UPROPERTY()
-	TArray<APlayerController*> PlayerOrder; // 순서
-
+	FGameManager* Manager;
 	EGameState CurrentGameState = EGameState::GameOver;
 
 	int WinCount = 3;
