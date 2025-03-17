@@ -33,6 +33,9 @@ public:
 	UTextBlock* PlayerTextBlock;
 
 	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TimerTextBlock;
+
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock* CurrentPlayerTextBlock;
 
 	UPROPERTY(meta = (BindWidget))
@@ -41,16 +44,16 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UScrollBox* ScoreBoardScrollBox;
 	
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void OnTextCommittedFunction(const FText& Text, const ETextCommit::Type CommitMethod);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SetDisplay(FNumberBaseballResult& Result);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SetTurn(const FString& Player);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SetCurrentPlayer(const FString& Player);
 
 	UFUNCTION(BlueprintCallable)
@@ -58,6 +61,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void AddScore(const FText& Message);
+
+	UFUNCTION(BlueprintCallable)
+	void SetTimerText(const FString& Time);
 
 protected:
 	virtual void NativeConstruct() override;

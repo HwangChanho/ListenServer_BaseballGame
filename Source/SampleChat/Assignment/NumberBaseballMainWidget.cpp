@@ -51,6 +51,8 @@ void UNumberBaseballMainWidget::OnTextCommittedFunction(const FText& Text, const
 {
 	if (CommitMethod == ETextCommit::OnEnter)
 	{
+		if (Text.IsEmpty()) return;
+		
 		ANumberBaseballController* Controller = Cast<ANumberBaseballController>(GetOwningPlayer());
 		if (!Controller)
 		{
@@ -76,12 +78,19 @@ void UNumberBaseballMainWidget::SetTurn(const FString& Player)
 {
 	if (!PlayerTextBlock) return;
 
-	PlayerTextBlock->SetText(FText::FromString(Player + FString(TEXT(" Turn"))));
+	PlayerTextBlock->SetText(FText::FromString(Player));
+}
+
+void UNumberBaseballMainWidget::SetTimerText(const FString& Time)
+{
+	if (!TimerTextBlock) return;
+
+	TimerTextBlock->SetText(FText::FromString(FString(TEXT("Time: ")) + Time));
 }
 
 void UNumberBaseballMainWidget::SetCurrentPlayer(const FString& Player)
 {
 	if (!CurrentPlayerTextBlock) return;
 
-	CurrentPlayerTextBlock->SetText(FText::FromString(Player));
+	CurrentPlayerTextBlock->SetText(FText::FromString(Player + FString(TEXT(" Turn"))));
 }

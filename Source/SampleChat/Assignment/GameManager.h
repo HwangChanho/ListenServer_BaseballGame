@@ -22,7 +22,7 @@ public:
 	void ReadyPlayer(APlayerController* PlayerController);
 	void AddReadyPlayer();
 	void RemovePlayer();
-	void AdvanceTurn();
+	void AdvanceTurn(bool bIsForce);
 	void UpdatePlayerScore(APlayerController* PlayerController, bool bIsCorrect);
 	
 	bool CheckPlayerIsOut(APlayerController* PlayerController);
@@ -46,6 +46,8 @@ public:
 private:
 	FGameManager() {}
 	~FGameManager() {}
+
+	bool bTurnFlag = false;
 
 	APlayerController* CurrentTurnPlayer;
 	APlayerController* WinnerPlayer;

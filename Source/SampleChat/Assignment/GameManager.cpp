@@ -32,7 +32,7 @@ FString FGameManager::GetWinnerScoreString()
 
 bool FGameManager::CheckPlayerIsOut(APlayerController* PlayerController)
 {
-	if (PlayerDetailMap[PlayerController].TurnLeft < 0 || PlayerDetailMap[PlayerController].BallCount > 2)
+	if (PlayerDetailMap[PlayerController].BallCount > 2)
 	{
 		PlayerOrder.Remove(PlayerController);
 		return true;
@@ -42,11 +42,21 @@ bool FGameManager::CheckPlayerIsOut(APlayerController* PlayerController)
 
 void FGameManager::UpdatePlayerScore(APlayerController* PlayerController, bool bIsCorrect)
 {
-	bIsCorrect ? ++PlayerDetailMap[PlayerController].StrikeCount : ++PlayerDetailMap[PlayerController].BallCount;
 	--PlayerDetailMap[PlayerController].TurnLeft;
 
-	if (bIsCorrect)
+	if (PlayerDetailMap[PlayerController].TurnLeft == 0) // 턴넘어가는 조건 1: 모든 턴 소진
 	{
+		++PlayerDetailMap[PlayerController].BallCount;
+		PlayerDetailMap[CurrentTurnPlayer].TurnLeft = 3;
+		bTurnFlag = true;
+	}
+
+	if (bIsCorrect) // 턴넘어가는 조건 2: 정답을 맞췄을때
+	{
+		++PlayerDetailMap[PlayerController].StrikeCount;
+		PlayerDetailMap[PlayerController].BallCount = 0;
+		PlayerDetailMap[PlayerController].TurnLeft = 3;
+		bTurnFlag = true;
 		GenerateRandNum();
 	}
 }
@@ -57,13 +67,22 @@ void FGameManager::RemovePlayer()
 	PlayerOrder.Empty();
 }
 
-void FGameManager::AdvanceTurn()
+void FGameManager::AdvanceTurn(bool bIsForce)
 {
+	if (!bTurnFlag) return;
+	bTurnFlag = false;
+	
 	const int32 CurrentIndex = PlayerOrder.Find(CurrentTurnPlayer);
 	if (CurrentIndex == INDEX_NONE) return;
 
 	const int32 NextIndex = (CurrentIndex + 1) % PlayerOrder.Num();
 	CurrentTurnPlayer = PlayerOrder[NextIndex];
+	
+	if (bIsForce)
+	{
+		PlayerDetailMap[CurrentTurnPlayer].TurnLeft = 3;
+		++PlayerDetailMap[CurrentTurnPlayer].BallCount;
+	}
 }
 
 void FGameManager::ReadyPlayer(APlayerController* PlayerController)

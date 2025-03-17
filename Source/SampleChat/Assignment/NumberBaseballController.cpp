@@ -47,8 +47,15 @@ void ANumberBaseballController::Tick(float DeltaTime)
 
 void ANumberBaseballController::SetCurrentPlayer() const
 {
+	if (!BaseballInstance) return;
 	const int32 PlayerID = this->GetUniqueID();
 	BaseballInstance->SetCurrentPlayer(FString::Printf(TEXT("%d"), PlayerID));
+}
+
+void ANumberBaseballController::Client_SendTimeLeft_Implementation(const FString& Time)
+{
+	if (!BaseballInstance) return;
+	BaseballInstance->SetTimerText(Time);
 }
 
 void ANumberBaseballController::Server_RequestBeginPlay_Implementation(APlayerController* PlayerController)
@@ -77,9 +84,6 @@ void ANumberBaseballController::Server_RequestReady_Implementation(APlayerContro
 
 void ANumberBaseballController::Client_IsOut_Implementation(int32 PlayerID)
 {
-	const FString JoinLog = FString::Printf(TEXT("[Player %d] Out"), PlayerID);
-	DebugHelper::PrintDebugMessage(JoinLog, WarningDisplayTime, ServerColor);
-
 	// TODO::위젯 변경
 	if (!BaseballInstance) return;
 	BaseballInstance->SetTurn("OUT");
@@ -141,7 +145,6 @@ void ANumberBaseballController::SendMessageToServer(const FString& Message)
 		if (Text == TEXT("start")) // Host 만 시작 가능
 		{
 			if (!HasAuthority()) return;
-			UE_LOG(LogTemp, Warning, TEXT("[Server] Start Game!"));
 			Server_RequestBeginPlay(this);
 			return;
 		}
@@ -160,13 +163,8 @@ void ANumberBaseballController::SendMessageToServer(const FString& Message)
 
 		if (UniqueChars.Num() == 3)
 		{
-			UE_LOG(LogTemp, Log, TEXT("유효한 입력: %s"), *Text);
-			DebugHelper::PrintDebugMessage(Text, DisplayTime, ServerColor);
 			Server_SendNumber(this, Message);
 		}
-
-		const FString FormattedMessage = FString::Printf(TEXT("중복 숫자 포함: [%s]"), *Text);
-		DebugHelper::PrintDebugMessage(FormattedMessage, WarningDisplayTime, WarningColor);
 	}
 	else
 	{

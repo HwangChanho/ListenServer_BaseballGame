@@ -48,6 +48,9 @@ public:
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
 	void Client_IsWinner(const FString& ScoreString, bool bIsWinner); // 큰 값음 참조로 전달해야 네트워크 복제에 문제 안생김
 	
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
+	void Client_SendTimeLeft(const FString& Time);
+	
 	UFUNCTION(BlueprintCallable)
 	void SendMessageToServer(const FString& Message);
 protected:

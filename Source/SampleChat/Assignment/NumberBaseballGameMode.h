@@ -47,10 +47,13 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	FGameManager* Manager;
+	FGameManager* Manager; // 게임 매니져
 	EGameState CurrentGameState = EGameState::GameOver;
 
+	FTimerHandle TurnTimerHandle;
+
 	int WinCount = 3;
+	float AvailTime = 30.0f;
 
 	// 게임 시작
 	void GenerateGame();
@@ -60,4 +63,10 @@ private:
 	void AddAllPlayerControllers(APlayerController* PlayerController);
 	// 승자 발생시
 	void PlayerWin();
+
+	// 타이머 관련
+	void StartTurnTimer();
+	void OnTurnTimeout();
+	void CancelTurnTimer();
+	const FString& GetTimerCount();
 };
