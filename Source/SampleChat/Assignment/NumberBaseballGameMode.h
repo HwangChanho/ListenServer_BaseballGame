@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FNumberBaseballResult.h"
 #include "GameFramework/GameMode.h"
 #include "GameManager.h"
 #include "NumberBaseballGameMode.generated.h"
@@ -61,8 +60,6 @@ private:
 	void AdvanceTurn();
 	// 플레이어 컨트롷러 가져오기
 	void AddAllPlayerControllers(APlayerController* PlayerController);
-	// 승자 발생시
-	void PlayerWin();
 
 	// 타이머 관련
 	void StartTurnTimer();
