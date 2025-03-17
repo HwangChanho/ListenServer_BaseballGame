@@ -3,7 +3,6 @@
 #include "DebugHelper.h"
 #include "NumberBaseballGameMode.h"
 #include "NumberBaseballMainWidget.h"
-#include "GameFramework/PlayerState.h"
 
 void ANumberBaseballController::BeginPlay()
 {
@@ -99,7 +98,7 @@ void ANumberBaseballController::Client_IsWinner_Implementation(const FString& Sc
 	}
 	
 	FNumberBaseballResult Result = FNumberBaseballResult();
-	BaseballInstance->SetTurn("type /ready");
+	BaseballInstance->SetTurn("type /ready to begin ready");
 	BaseballInstance->SetDisplay(Result);
 }
 
@@ -126,7 +125,7 @@ void ANumberBaseballController::Server_SendMessage_Implementation(const FString&
 void ANumberBaseballController::Client_ReceiveMessage_Implementation(const FString& Message)
 {
 	if (!BaseballInstance) return;
-	BaseballInstance->AddMessage(FText::FromString(Message));
+	BaseballInstance->AddMessage(FText::FromString(Message), FSlateColor(FLinearColor::White));
 }
 
 void ANumberBaseballController::SendMessageToServer(const FString& Message)

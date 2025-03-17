@@ -52,7 +52,7 @@ private:
 	FTimerHandle TurnTimerHandle;
 
 	int WinCount = 3;
-	float AvailTime = 5.0f;
+	float AvailTime = 10.0f;
 
 	// 게임 시작
 	void GenerateGame();

@@ -220,7 +220,7 @@ void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerControl
 	
 	if (InputNumberString == "000")
 	{
-		BroadcastMessageToAllControllers("Time Out!!!");
+		BroadcastMessageToAllControllers("[Server] Time Out!!!");
 	}
 	else
 	{

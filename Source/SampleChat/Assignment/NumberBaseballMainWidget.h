@@ -57,7 +57,7 @@ public:
 	void SetCurrentPlayer(const FString& Player);
 
 	UFUNCTION(BlueprintCallable)
-	void AddMessage(const FText& Message);
+	void AddMessage(const FText& Message, const FSlateColor& Color);
 
 	UFUNCTION(BlueprintCallable)
 	void AddScore(const FText& Message);

@@ -15,7 +15,7 @@ void UNumberBaseballMainWidget::NativeConstruct()
 	}
 }
 
-void UNumberBaseballMainWidget::AddMessage(const FText& Message)
+void UNumberBaseballMainWidget::AddMessage(const FText& Message, const FSlateColor& Color)
 {
 	if (!IsValid(ChatScrollBox)) return;
 
@@ -24,7 +24,7 @@ void UNumberBaseballMainWidget::AddMessage(const FText& Message)
 	{
 		NewMessage->SetText(Message);
 		NewMessage->Font.Size = 20;
-		NewMessage->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+		NewMessage->SetColorAndOpacity(Color);
 
 		ChatScrollBox->AddChild(NewMessage);
 		ChatScrollBox->ScrollToEnd();
