@@ -200,7 +200,6 @@ void ANumberBaseballGameMode::ReceiveCheckResult(APlayerController* PlayerContro
 			const int32 PlayerID = PlayerController->GetUniqueID();
 			NumberBaseballPlayerController->Client_IsOut(PlayerID);
 			NumberBaseballPlayerController->Client_SendResult(Manager->GetPlayerResult(PlayerController));
-			
 		}
 		else
 		{
@@ -250,7 +249,6 @@ void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerControl
 				CurrentGameState = EGameState::GameOver;
 			}
 		}
-		
 		return;
 	}
 
