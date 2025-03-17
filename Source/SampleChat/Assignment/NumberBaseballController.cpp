@@ -81,19 +81,27 @@ void ANumberBaseballController::Client_IsOut_Implementation(int32 PlayerID)
 	DebugHelper::PrintDebugMessage(JoinLog, WarningDisplayTime, ServerColor);
 
 	// TODO::위젯 변경
+	if (!BaseballInstance) return;
+	BaseballInstance->SetTurn("OUT");
+}
+
+void ANumberBaseballController::Client_IsWinner_Implementation(const FString& ScoreString, bool bIsWinner)
+{
+	// 점수 초기화
+	if (bIsWinner)
+	{
+		FText ScoreText = FText::FromString(ScoreString);
+		BaseballInstance->AddScore(ScoreText);
+	}
 	
-}
-
-void ANumberBaseballController::Client_IsWinner_Implementation(int32 PlayerID)
-{
-	const FString JoinLog = FString::Printf(TEXT("[Player %d] Won!"), PlayerID);
-	DebugHelper::PrintDebugMessage(JoinLog, DisplayTime, ServerColor);
-}
-
-void ANumberBaseballController::Client_TurnStart_Implementation(int32 PlayerID, FNumberBaseballResult Result)
-{
-	BaseballInstance->SetTurn(FString::Printf(TEXT("%d"), PlayerID));
+	FNumberBaseballResult Result = FNumberBaseballResult();
+	BaseballInstance->SetTurn("type /ready");
 	BaseballInstance->SetDisplay(Result);
+}
+
+void ANumberBaseballController::Client_TurnStart_Implementation(int32 PlayerID)
+{
+	BaseballInstance->SetTurn(FString::Printf(TEXT("%d Turn"), PlayerID));
 }
 
 void ANumberBaseballController::Client_SendResult_Implementation(FNumberBaseballResult Result)
@@ -106,7 +114,7 @@ void ANumberBaseballController::Server_SendMessage_Implementation(const FString&
 {
 	if (ANumberBaseballGameMode* GameMode = Cast<ANumberBaseballGameMode>(GetWorld()->GetAuthGameMode()))
 	{
-		FString FormattedMessage = FString::Printf(TEXT("[Player%d]: %s"), this->GetUniqueID(), *Message);
+		FString FormattedMessage = FString::Printf(TEXT("[Player %d]: %s"), this->GetUniqueID(), *Message);
 		GameMode->BroadcastMessageToAllControllers(FormattedMessage);
 	}
 }
@@ -179,7 +187,7 @@ void ANumberBaseballController::Server_SendNumber_Implementation(APlayerControll
 
 	if (GameMode->CheckTurn(PlayerController))
 	{
-		GameMode->CheckNumberString(this, NumString);
+		GameMode->CheckNumberString(this, NumberPart);
 	}
 	else
 	{

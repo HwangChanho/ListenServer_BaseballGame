@@ -20,15 +20,30 @@ void UNumberBaseballMainWidget::AddMessage(const FText& Message)
 	if (!IsValid(ChatScrollBox)) return;
 
 	UTextBlock* NewMessage = NewObject<UTextBlock>(this);
-	UE_LOG(LogTemp, Error, TEXT("%s"), *Message.ToString());
 	if (NewMessage)
 	{
 		NewMessage->SetText(Message);
-		NewMessage->Font.Size = 24;
+		NewMessage->Font.Size = 20;
 		NewMessage->SetColorAndOpacity(FSlateColor(FLinearColor::White));
 
 		ChatScrollBox->AddChild(NewMessage);
 		ChatScrollBox->ScrollToEnd();
+	}
+}
+
+void UNumberBaseballMainWidget::AddScore(const FText& Message)
+{
+	if (!IsValid(ScoreBoardScrollBox)) return;
+
+	UTextBlock* NewMessage = NewObject<UTextBlock>(this);
+	if (NewMessage)
+	{
+		NewMessage->SetText(Message);
+		NewMessage->Font.Size = 15;
+		NewMessage->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+
+		ScoreBoardScrollBox->AddChild(NewMessage);
+		ScoreBoardScrollBox->ScrollToEnd();
 	}
 }
 
@@ -50,7 +65,7 @@ void UNumberBaseballMainWidget::OnTextCommittedFunction(const FText& Text, const
 
 void UNumberBaseballMainWidget::SetDisplay(FNumberBaseballResult& Result)
 {
-	if (IsValid(BallTextBlock) && IsValid(StrikeTextBlock) && IsValid(TurnTextBlock)) return;
+	if (!IsValid(BallTextBlock) || !IsValid(StrikeTextBlock) || !IsValid(TurnTextBlock)) return;
 
 	BallTextBlock->SetText(FText::FromString(FString::Printf(TEXT("B: %d"), Result.BallCount)));
 	StrikeTextBlock->SetText(FText::FromString(FString::Printf(TEXT("S: %d"), Result.StrikeCount)));
@@ -68,5 +83,5 @@ void UNumberBaseballMainWidget::SetCurrentPlayer(const FString& Player)
 {
 	if (!CurrentPlayerTextBlock) return;
 
-	CurrentPlayerTextBlock->SetText(FText::FromString(FString(TEXT("Player: ")) + Player));
+	CurrentPlayerTextBlock->SetText(FText::FromString(Player));
 }

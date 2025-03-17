@@ -19,17 +19,16 @@ void ANumberBaseballGameMode::Tick(float DeltaTime)
 	
 	if (CurrentGameState == EGameState::GameOver)
 	{
-		const FString JoinLog = FString::Printf(TEXT("Waiting for player...."));
-		DebugHelper::PrintDebugMessage(JoinLog, 1.0f, FColor::Cyan);
+		BroadcastMessageToAllControllers("[Server] Waiting for player....");
 		CurrentGameState = EGameState::Waiting;
+		PlayerDetailMap.Empty();
+		PlayerOrder.Empty();
 	}
 }
 
 void ANumberBaseballGameMode::GenerateGame()
 {
-	const FString JoinLog = FString::Printf(TEXT("Game Generating...."));
-	DebugHelper::PrintDebugMessage(JoinLog, 1.0f, FColor::Cyan);
-	
+	BroadcastMessageToAllControllers("[Server] Game Generating....");
 	for (const auto& Entry : PlayerDetailMap)
 	{
 		if (!PlayerOrder.Contains(Entry.Key))
@@ -61,7 +60,37 @@ void ANumberBaseballGameMode::BroadcastMessageUsingGameState(const FString& Mess
 
 void ANumberBaseballGameMode::AdvanceTurn()
 {
-	if (PlayerOrder.Num() == 0) return;
+	if (PlayerOrder.Num() == 0)
+	{
+		BroadcastMessageToAllControllers("No Winner");
+		CurrentGameState = EGameState::GameOver;
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(It->Get()))
+			{
+				CastingController->Client_IsWinner("", false);
+			}
+		}
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("CurrentTurnPlayer ==> [%d]"), CurrentTurnPlayer->GetUniqueID());
+
+	// 한명일때
+	if (PlayerOrder.Num() == 1)
+	{
+		CurrentTurnPlayer = PlayerOrder[0];
+		const int32 BeginPlayerID = PlayerOrder[0]->GetUniqueID();
+		const FString Message = FString::Printf(TEXT("[Server] [%d] Turn"), BeginPlayerID);
+		BroadcastMessageToAllControllers(Message);
+		
+		if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(PlayerOrder[0]))
+		{
+			CastingController->Client_TurnStart(BeginPlayerID);
+		}
+
+		return;
+	}
 
 	const int32 CurrentIndex = PlayerOrder.Find(CurrentTurnPlayer);
 	if (CurrentIndex == INDEX_NONE) return;
@@ -74,13 +103,13 @@ void ANumberBaseballGameMode::AdvanceTurn()
 	{
 		const int32 BeginPlayerID = StartController->GetUniqueID();
 		const FString Message = FString::Printf(TEXT("[Server] [%d] Turn"), BeginPlayerID);
-		BroadcastMessageUsingGameState(Message);
+		BroadcastMessageToAllControllers(Message);
 		
-		for (const auto& c : PlayerOrder)
+		for (const auto& Controller : PlayerOrder)
 		{
-			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(c))
+			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(Controller))
 			{
-				CastingController->Client_TurnStart(BeginPlayerID, PlayerDetailMap[StartController]);
+				CastingController->Client_TurnStart(BeginPlayerID);
 			}
 		}
 	}
@@ -94,8 +123,14 @@ void ANumberBaseballGameMode::AddAllPlayerControllers(APlayerController* PlayerC
 		{
 			if (!PlayerDetailMap.Contains(PlayerController) && PlayerController == WorldPlayerController)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[Server] Adding PlayerController: %p"), PlayerController);
 				PlayerDetailMap.Add(PlayerController, FNumberBaseballResult());
+				FString Log = FString::Format(TEXT("[Server] {0} ready"), { PlayerController->GetUniqueID() });
+				BroadcastMessageToAllControllers(Log);
+
+				if (PlayerDetailMap.Num() > 1)
+				{
+					BroadcastMessageToAllControllers("[Server] Host must type '/start' to play game");
+				}
 			}
 		}
 	}
@@ -136,27 +171,25 @@ void ANumberBaseballGameMode::GenerateRandNumber()
 
 void ANumberBaseballGameMode::ReceiveCheckResult(APlayerController* PlayerController)
 {
-	if (ANumberBaseballController* NumberBaseballPlayerController = Cast<ANumberBaseballController>(PlayerController))
+	if (PlayerDetailMap[PlayerController].TurnLeft < 0 || PlayerDetailMap[PlayerController].BallCount > 2)
 	{
-		if (PlayerDetailMap[PlayerController].TurnLeft < 0 || PlayerDetailMap[PlayerController].BallCount > 2)
+		if (ANumberBaseballController* NumberBaseballPlayerController = Cast<ANumberBaseballController>(PlayerController))
 		{
-			int32 PlayerID = NumberBaseballPlayerController->GetUniqueID();
+			int32 PlayerID = PlayerController->GetUniqueID();
 			NumberBaseballPlayerController->Client_IsOut(PlayerID);
 			PlayerOrder.Remove(PlayerController);
-
-			if (PlayerOrder.Num() == 1 && PlayerOrder.IsValidIndex(0))
-			{
-				// 승자 전송
-				int32 WonPlayerID = PlayerOrder[0]->GetUniqueID();
-				NumberBaseballPlayerController->Client_IsWinner(WonPlayerID);
-				CurrentGameState = EGameState::GameOver;
-			}
-			return;
+			NumberBaseballPlayerController->Client_SendResult(PlayerDetailMap[PlayerController]);
 		}
-		
-		NumberBaseballPlayerController->Client_SendResult(PlayerDetailMap[PlayerController]);
-		AdvanceTurn();
 	}
+	else
+	{
+		if (ANumberBaseballController* NumberBaseballPlayerController = Cast<ANumberBaseballController>(PlayerController))
+		{
+			NumberBaseballPlayerController->Client_SendResult(PlayerDetailMap[PlayerController]);
+		}
+	}
+
+	AdvanceTurn();
 }
 
 void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerController, const FString& InputNumberString)
@@ -164,15 +197,53 @@ void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerControl
 	if (EGameState::Playing != CurrentGameState || CurrentTurnPlayer != PlayerController) return;
 
 	bool bIsCorrect = (InputNumberString.Len() == 3 && InputNumberString == CorrectNumber);
-	FString Log = FString::Format(TEXT("Input: {0} | Correct: {1} | Match: {2}"),
-	{ InputNumberString, CorrectNumber, bIsCorrect ? TEXT("YES") : TEXT("NO") });
+	FString Log = FString::Format(TEXT("[Player {0}] {1} -> {2}"),
+	{ PlayerController->GetUniqueID(), InputNumberString, bIsCorrect ? TEXT("Correct") : TEXT("Wrong") });
 	BroadcastMessageToAllControllers(Log);
 
 	bIsCorrect ? ++PlayerDetailMap[PlayerController].StrikeCount : ++PlayerDetailMap[PlayerController].BallCount;
 	--PlayerDetailMap[PlayerController].TurnLeft;
 
+	if (PlayerDetailMap[PlayerController].StrikeCount > WinCount)
+	{
+		int32 WonPlayerID = PlayerController->GetUniqueID();
+		FString WinnerLog = FString::Format(TEXT("[Server] Player {0} Winner Winner!"), { WonPlayerID });
+		BroadcastMessageToAllControllers(WinnerLog);
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (ANumberBaseballController* CastingController = Cast<ANumberBaseballController>(It->Get()))
+			{
+				if (PlayerController)
+				{
+					WinnerMap.FindOrAdd(PlayerController)++;
+				}
+
+				FString ScoreString = "";
+				for (const auto& Score : WinnerMap)
+				{
+					FString Winner = FString::Printf(TEXT("Player %d: %d\n"), Score.Key->GetUniqueID(), Score.Value);
+					ScoreString += Winner;
+				}
+				
+				CastingController->Client_IsWinner(ScoreString, true);
+				CurrentGameState = EGameState::GameOver;
+			}
+		}
+		return;
+	}
+
 	ReceiveCheckResult(PlayerController);
 }
+
+void ANumberBaseballGameMode::PlayerWin()
+{
+	
+}
+
+
+
+
+// 채팅
 
 void ANumberBaseballGameMode::BroadcastMessageToAllControllers(const FString& Message)
 {

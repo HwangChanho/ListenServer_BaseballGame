@@ -37,6 +37,9 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UScrollBox* ChatScrollBox;
+
+	UPROPERTY(meta = (BindWidget))
+	UScrollBox* ScoreBoardScrollBox;
 	
 	UFUNCTION()
 	void OnTextCommittedFunction(const FText& Text, const ETextCommit::Type CommitMethod);
@@ -52,6 +55,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void AddMessage(const FText& Message);
+
+	UFUNCTION(BlueprintCallable)
+	void AddScore(const FText& Message);
 
 protected:
 	virtual void NativeConstruct() override;

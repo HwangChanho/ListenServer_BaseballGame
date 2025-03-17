@@ -50,13 +50,19 @@ private:
 	FString CorrectNumber;
 	UPROPERTY()
 	APlayerController* CurrentTurnPlayer;
+	UPROPERTY()
+	APlayerController* WinnerPlayer;
 
 	UPROPERTY()
 	TMap<APlayerController*, FNumberBaseballResult> PlayerDetailMap; // 순서 보장 안됨
 	UPROPERTY()
+	TMap<APlayerController*, int32> WinnerMap; // 승자 목록
+	UPROPERTY()
 	TArray<APlayerController*> PlayerOrder; // 순서
 
 	EGameState CurrentGameState = EGameState::GameOver;
+
+	int WinCount = 3;
 
 	// 게임 시작
 	void GenerateGame();
@@ -64,4 +70,6 @@ private:
 	void AdvanceTurn();
 	// 플레이어 컨트롷러 가져오기
 	void AddAllPlayerControllers(APlayerController* PlayerController);
+	// 승자 발생시
+	void PlayerWin();
 };

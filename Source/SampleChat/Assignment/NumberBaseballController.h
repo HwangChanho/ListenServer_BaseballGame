@@ -40,14 +40,14 @@ public:
 	void Client_SendResult(FNumberBaseballResult Result);
 	
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
-	void Client_TurnStart(int32 PlayerID, FNumberBaseballResult Result);
+	void Client_TurnStart(int32 PlayerID);
 	
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
 	void Client_IsOut(int32 PlayerID);
-
+	
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Client")
-	void Client_IsWinner(int32 PlayerID);
-
+	void Client_IsWinner(const FString& ScoreString, bool bIsWinner); // 큰 값음 참조로 전달해야 네트워크 복제에 문제 안생김
+	
 	UFUNCTION(BlueprintCallable)
 	void SendMessageToServer(const FString& Message);
 protected:
