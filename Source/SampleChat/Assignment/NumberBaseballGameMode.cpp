@@ -49,7 +49,6 @@ void ANumberBaseballGameMode::StartTurnTimer()
 
 void ANumberBaseballGameMode::OnTurnTimeout()
 {
-	BroadcastMessageToAllControllers("Time Out!!!");
 	CheckNumberString(Manager->GetCurrentPlayer(), "000");
 }
 
@@ -98,6 +97,7 @@ void ANumberBaseballGameMode::AdvanceTurn()
 	StartTurnTimer();
 	if (Manager->GetPlayerCount() == 0)
 	{
+		CancelTurnTimer();
 		BroadcastMessageToAllControllers("No Winner");
 		CurrentGameState = EGameState::GameOver;
 		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
@@ -217,8 +217,16 @@ void ANumberBaseballGameMode::CheckNumberString(APlayerController* PlayerControl
 	CancelTurnTimer();
 
 	bool bIsCorrect = (InputNumberString.Len() == 3 && InputNumberString == Manager->GetCorrectNumber());
-	FString Log = FString::Format(TEXT("[Player {0}] {1} -> {2}"), { PlayerController->GetUniqueID(), InputNumberString, bIsCorrect ? TEXT("Correct") : TEXT("Wrong") });
-	BroadcastMessageToAllControllers(Log);
+	
+	if (InputNumberString == "000")
+	{
+		BroadcastMessageToAllControllers("Time Out!!!");
+	}
+	else
+	{
+		FString Log = FString::Format(TEXT("[Player {0}] {1} -> {2}"), { PlayerController->GetUniqueID(), InputNumberString, bIsCorrect ? TEXT("Correct") : TEXT("Wrong") });
+		BroadcastMessageToAllControllers(Log);
+	}
 
 	Manager->UpdatePlayerScore(PlayerController, bIsCorrect);
 	UE_LOG(LogTemp, Warning, TEXT("Generated Number: %s"), *Manager->GetCorrectNumber());

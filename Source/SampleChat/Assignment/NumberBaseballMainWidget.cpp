@@ -92,5 +92,5 @@ void UNumberBaseballMainWidget::SetCurrentPlayer(const FString& Player)
 {
 	if (!CurrentPlayerTextBlock) return;
 
-	CurrentPlayerTextBlock->SetText(FText::FromString(Player + FString(TEXT(" Turn"))));
+	CurrentPlayerTextBlock->SetText(FText::FromString(Player));
 }
