@@ -1,3 +1,8 @@
+![게임화면](https://github.com/HwangChanho/ListenServer_BaseballGame/blob/main/Image/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-03-17%20183107.png)
+![게임화면](https://github.com/HwangChanho/ListenServer_BaseballGame/blob/main/Image/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-03-17%20183123.png)
+![게임화면](https://github.com/HwangChanho/ListenServer_BaseballGame/blob/main/Image/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-03-17%20183159.png)
+![게임화면](https://github.com/HwangChanho/ListenServer_BaseballGame/blob/main/Image/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-03-17%20183233.png)
+
 ## 1️⃣ **Intro :  숫자 야구 게임을 만들어 봅시다.**
 
 비디오 게임의 할아버지의 할아버지로 만들어진지 100년이 넘는 숫자 야구 게임을 만들어 봅시다. 원조 게임은 4자리 숫자로 하는 Bulls and Cows 입니다.
